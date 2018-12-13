@@ -1,3 +1,6 @@
+import argparse
+import os
+
 from multiprocessing.dummy import Pool as ThreadPool
 from utils import *
 from actor import Actor
@@ -5,25 +8,73 @@ from agent import Agent
 import gym
 from collections import deque
 
-hypers = {'num_actors': 16,
-          'rollout_length': 8,
-          'env': 'dimChooserEnv-v0',  # 'angleEnv-v0',  # 'robotArmEnv-v0',  #
-          'entropy_beta': 0.0,
-          'critic_lambda': 0.5,
-          'sc_critic_lambda': 0.5,
-          'prediction_lambda': 0.1,
-          'monotonic_lambda': 1.0,
-          'discount': 0.99,
-          'gae_lambda': 1.0,
-          'hidden_layers': [256, 128, 64],
-          'max_gradient_norm': None,
-          'learning_rate': 0.01,
-          'mode': 'saver',  # 'a2c',  #
-          'K': 32,
-          'huber': False,
-          'number_of_pretrain_batches': 10000,
-          'number_of_training_batches': 100000,
-          'run_id': str(np.random.randint(1000))}
+# side-effect of registering project envs
+import saver_envs
+
+p = argparse.ArgumentParser()
+p.add_argument(
+    '--actors', dest='num_actors', type=int, default=16,
+    help='Number of actors')
+p.add_argument(
+    '--rollout_length', type=int, default=8,
+    help='Rollout length')
+p.add_argument(
+    '--env', default='dimChooserEnv-v0',
+    choices=('dimChooserEnv-v0', 'angleEnv-v0', 'robotArmEnv-v0'),
+    help='Gym environment')
+p.add_argument(
+    '--entropy_beta', type=float, default=0.0,
+    help='Entroy beta')
+p.add_argument(
+    '--critic_lambda', type=float, default=0.5,
+    help='Critic lambda')
+p.add_argument(
+    '--sc_critic_lambda', type=float, default=0.5,
+    help='SC critic lambda')
+p.add_argument(
+    '--prediction_lambda', type=float, default=0.1,
+    help='Prediction lambda')
+p.add_argument(
+    '--monotonic_lambda', type=float, default=1.0,
+    help='Monotonic lambda')
+p.add_argument(
+    '--discount', type=float, default=0.99,
+    help='Discount')
+p.add_argument(
+    '--gae_lambda', type=float, default=1.0,
+    help='GAE lambda')
+p.add_argument(
+    '--max_gradient_norm', type=float, default=None,
+    help='Max grarient norm')
+p.add_argument(
+    '--learning_rate', type=float, default=0.01,
+    help='Learning rate')
+p.add_argument(
+    '--mode', default='saver', choices=('saver', 'a2c'),
+    help='Training mode')
+p.add_argument(
+    '--K', type=int, default=32,
+    help='K')
+p.add_argument(
+    '--huber', action='store_true',
+    help="Use huber loss")
+p.add_argument(
+    '--pretrain_batches', dest='number_of_pretrain_batches',
+    type=int, default=10000,
+    help='Number of pretrain batches')
+p.add_argument(
+    '--training_batches', dest='number_of_training_batches',
+    type=int, default=100000,
+    help='Number of training batches')
+p.add_argument(
+    '--run_id', default=str(np.random.randint(1000)),
+    help='Run ID')
+p.add_argument(
+    '--log_base', default='tensorboard_log',
+    help='Base directory for logs')
+
+hypers = dict(p.parse_args()._get_kwargs())
+hypers['hidden_layers'] = [256, 128, 64]
 
 print('Run ID: ', str(hypers['run_id']))
 hypers['batch_size'] = hypers['rollout_length'] * hypers['num_actors']
@@ -39,8 +90,11 @@ a_dim = dummy_env.action_space.shape[0]
 hypers['state_size'] = dummy_env.observation_space.shape[0]
 if hypers['env'] == 'robotArmEnv-v0':
     hypers['state_size'] = 2
-hypers['log_dir'] = \
-    'tensorboard_log/' + hypers['env'] + '/mode=' + hypers['mode'] + '/' + str(hypers['state_size']) + '_dim/'
+hypers['log_dir'] = os.path.join(
+    hypers['log_base'],
+    hypers['env'],
+    'mode={}'.format(hypers['mode']),
+    '{}_dim'.format(hypers['state_size']))
 print('hypers: ', str(hypers))
 
 agent = Agent(list(dummy_env.observation_space.shape), a_dim, hypers)
