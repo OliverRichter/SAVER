@@ -1,0 +1,35 @@
+- model: saver
+  description: Quantile Regression Reinforcement Learning with State Aligned Vector Rewards
+  operations:
+    train:
+      description: Train the model
+      main: main --log_base logs
+      requires: saver-envs
+      flags:
+        $import:
+          - actors
+          - rollout_length
+          - env
+          - entropy_data
+          - critic_lambda
+          - sc_critic_lambda
+          - prediction_lambda
+          - monotonic_lambda
+          - discount
+          - gae_lambda
+          - max_gradient_norm
+          - learning_rate
+          - mode
+          - K
+          - huber
+          - pretrain_batches
+          - training_batches
+
+  extra:
+    scalars:
+      loss: .+/value_loss
+      loss_step: .+/value_loss_step
+  resources:
+    saver-envs:
+      sources:
+        - saver_envs/saver_envs
